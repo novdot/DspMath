@@ -26,7 +26,7 @@ public:
 
 public slots:
     void openSrcFile();
-    void openDstFile();
+    void testSin();
     void runDsp();
 private:
     Ui::MainWindow *ui;

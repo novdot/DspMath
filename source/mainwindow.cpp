@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setWindowTitle("DspMath");
 
-    connect(ui->pushButton_choose_dst,SIGNAL(clicked()),this,SLOT(openDstFile()));
+    connect(ui->pushButton_choose_dst,SIGNAL(clicked()),this,SLOT(testSin()));
     connect(ui->pushButton_open_src,SIGNAL(clicked()),this,SLOT(openSrcFile()));
     connect(ui->pushButton_run,SIGNAL(clicked()),this,SLOT(runDsp()));
 
@@ -66,10 +66,24 @@ void MainWindow::openSrcFile()
     ui->label_status->setText("openSrcFile..done");
 }
 /**************************************************************************/
+void MainWindow::testSin()
+{
+    int it = 0;
+    int it_max = 40;
+    int it_periods = 0;
+    int it_periods_max = 25;
+    m_src_array.clear();
+    ui->label_status->setText("test Sinus");
+
+    for(it_periods=0;it_periods<it_periods_max;it_periods++){
+        for(it=0;it<it_max;it++){
+             m_src_array.append((int)(sin((float)it*2.0*3.1415/(float)it_max)*1000)+32000);
+        }
+    }
+}
+/**************************************************************************
 void MainWindow::openDstFile()
 {
-    m_strDstFileName = QFileDialog::getSaveFileName(0, "Save Dialog", "", "*.txt");
-    ui->label_status_dst_file->setText(m_strDstFileName);
 }
 
 /**************************************************************************/
@@ -121,6 +135,13 @@ void dsp_init()
         bDUP[2] = (int)((- R_x_R)*HALFINT);
         break;
     }
+
+    printf("Init reqursion coef\n");
+    printf("CenterFreq:%f BandWidth:%f\n",CenterFreq,BandWidth);
+    printf("K:%f, R:%f, Cos_x_2:%f, R_x_R:%f\n",K, R, Cos_x_2, R_x_R);
+    printf("A(%d,%d,%d)\n",aPLC[0],aPLC[1],aPLC[2]);
+    printf("B(%d,%d,%d)\n",bPLC[0],bPLC[1],bPLC[2]);
+    /*
     qDebug()<<"-----------------------------------"<<endl<<"Init reqursion coef"<<endl;
     qDebug()<< " f:" << CenterFreq << " BW:"<<BandWidth;
     qDebug()<< " K:" << K << " R:"<<R;
@@ -129,7 +150,7 @@ void dsp_init()
     qDebug()<< " A2:" << aPLC[2];
     qDebug()<< " B1:" << bPLC[1];
     qDebug()<< " B2:" << bPLC[2];
-    qDebug()<<"-----------------------------------"<<endl;
+    qDebug()<<"-----------------------------------"<<endl;*/
 }
 int dsp_run(int input)
 {
@@ -150,8 +171,8 @@ int dsp_run(int input)
     // BufInPLC_2[kIn] = 0;
 
     for (i=0; i<L_PLC; i++){
-        temp += aPLC[i]*BufInPLC_1[ind];
-        temp += bPLC[i]*BufInPLC_2[ind];
+        temp += (int64_t)aPLC[i]*(int64_t)BufInPLC_1[ind];
+        temp += (int64_t)bPLC[i]*(int64_t)BufInPLC_2[ind];
         if ((--ind) < 0) ind = L_PLC-1;
     }
     BufInPLC_2[kIn] = (int)(temp>>30);
@@ -160,8 +181,8 @@ int dsp_run(int input)
     //  BufOutPLC[kIn] = 0;
     temp = 0;
     for (i=0; i<L_PLC; i++){
-        temp += aPLC[i]*BufInPLC_2[ind];
-        temp += bPLC[i]*BufOutPLC[ind];
+        temp += (int64_t)aPLC[i]*(int64_t)BufInPLC_2[ind];
+        temp += (int64_t)bPLC[i]*(int64_t)BufOutPLC[ind];
         if ((--ind) < 0) ind = L_PLC-1;
     }
     BufOutPLC[kIn] = (int)(temp>>30);
@@ -196,7 +217,8 @@ void MainWindow::runDsp()
 /**************************************************************************/
 void MainWindow::saveDstFile()
 {
-    openDstFile();
+    m_strDstFileName = QFileDialog::getSaveFileName(0, "Save Dialog", "", "*.txt");
+    ui->label_status_dst_file->setText(m_strDstFileName);
     QFile file(m_strDstFileName);
 
     if (!file.open(QIODevice::WriteOnly)) {
